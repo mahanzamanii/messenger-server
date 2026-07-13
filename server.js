@@ -5,7 +5,15 @@ const mysql = require('mysql2/promise');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+// ================= فیکس ارور CORS =================
+const io = new Server(server, {
+    cors: {
+        // فقط به این دوتا آدرس اجازه اتصال میده
+        origin: ["https://mahixo.ir", "https://chat.mahixo.ir"],
+        methods: ["GET", "POST"],
+        credentials: true
+    }
+});
 
 const db = mysql.createPool({ host: 'localhost', user: 'root', password: '', database: 'messenger' });
 const onlineUsers = {};
