@@ -8,10 +8,8 @@ const server = http.createServer(app);
 // ================= فیکس ارور CORS =================
 const io = new Server(server, {
     cors: {
-        // فقط به این دوتا آدرس اجازه اتصال میده
-        origin: ["https://mahixo.ir", "https://chat.mahixo.ir"],
-        methods: ["GET", "POST"],
-        credentials: true
+        origin: "*", // به همه اجازه میده، چون نشست ها تو api.php چک میشن نه تو socket
+        methods: ["GET", "POST"]
     }
 });
 
