@@ -15,26 +15,38 @@ const io = new Server(server, {
     }
 });
 
-const db = mysql.createPool({ host: 'localhost', user: 'root', password: '', database: 'messenger' });
+const db = mysql.createPool({ 
+    host: process.env.DB_HOST || 'localhost', 
+    user: process.env.DB_USER || 'root', 
+    password: process.env.DB_PASS || '', 
+    database: process.env.DB_NAME || 'messenger',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 0
+});
 const onlineUsers = {};
 
 io.on('connection', (socket) => {
     socket.on('user_connected', async (userId) => {
         onlineUsers[String(userId)] = socket.id;
-        db.execute('UPDATE users SET last_seen = NOW() WHERE id = ?', [userId]);
+        
+        // آپدیت last_seen با مدیریت خطا
+        db.execute('UPDATE users SET last_seen = NOW() WHERE id = ?', [userId]).catch(err => console.error("DB Update Error:", err.message));
 
         try {
             const [rows] = await db.execute('SELECT hide_online FROM users WHERE id = ?', [userId]);
             const isHidden = rows[0] && rows[0].hide_online == 1;
             if (!isHidden) io.emit('user_status', { user_id: userId, status: 'online' });
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error("DB Select Error:", err.message); }
 
         try {
             const [chats] = await db.execute('SELECT chat_id FROM chat_members WHERE user_id = ?', [userId]);
             chats.forEach(c => socket.join(`chat_${c.chat_id}`));
-        } catch (err) { console.error(err); }
+        } catch (err) { console.error("DB Join Error:", err.message); }
     });
-
+    
     socket.on('join_chat', (chatId) => socket.join(`chat_${chatId}`));
 
     socket.on('typing', (data) => socket.to(`chat_${data.chat_id}`).emit('status_update', { user_id: data.user_id, status: data.is_typing ? 'typing' : 'online' }));
